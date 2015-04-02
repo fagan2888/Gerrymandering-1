@@ -32,11 +32,10 @@ class Congress(object):
     def __init__(self):
         self.path = "/Users/LaughingMan/Desktop/projects/gerrymandering/"
         self.dbf = None
-        self.legislators = None
         self.district_to_fips = None
-        self.name_to_district = None
         self.all_rep_info = None
         self.merged = None
+        self.all_fips = None
 
     def load(self, path = None):
         if path:
@@ -45,62 +44,29 @@ class Congress(object):
             path = self.path
 
         self.dbf = dataIO.dbf2df(path +
-            "cb_2013_us_cd113_20m/cb_2013_us_cd113_20m.dbf")
-        self.legislators = pd.read_csv(path + "legislators-current.csv")
+            "tl_2014_us_cd114/tl_2014_us_cd114.dbf")
         self.district_to_fips = pd.read_csv(path +
             "national_cd113.txt", sep=r"\s\s+")
-        name_to_district = pd.read_html(path +
-            'congress114.html', header = 0)
-        self.name_to_district = name_to_district[0]
         self.all_rep_info = pd.read_excel(path + 'excel-labels-114.xls',
             page=0)
-
-    def clean_legislators(self):
-        legislators = self.legislators
-        legislators = legislators[legislators['type']=='rep']
-        legislators = legislators[['last_name', 'first_name', 'state', 'district', 'party']]
-        for c in ['first_name', 'last_name']:
-            legislators[c] = legislators[c].apply(lambda x: x.decode('unicode-escape'))
-            legislators[c] = legislators[c].apply(lambda x: x.encode('ascii','ignore'))
-        self.legislators = legislators
+        self.all_fips = pd.read_excel(path + 'fips_codes_website.xls')
 
     def clean_district_to_fips(self):
         district_to_fips = self.district_to_fips
         district_to_fips['STATE'] = \
             district_to_fips['STATE'].apply(lambda x : states[x])
         district_to_fips['District'] = \
-            district_to_fips['NAMELSAD'].apply(lambda x: re.findall('not|Large|[0-9]+',x)[0])
+            district_to_fips['NAMELSAD'].apply(lambda x: re.findall('not|Large|[0-9]+', x)[0])
         district_to_fips = district_to_fips[['STATE', 'STATEFP', 'CD113FP', 'District']]
-        cnames = ['STATE', 'STATEFP', 'CD113FP', 'DISTRICT']
+        cnames = ['STATE', 'STATEFP', 'CD114FP', 'DISTRICT']
         district_to_fips.columns = cnames
         cond1 = district_to_fips['DISTRICT'] != 'Large'
         cond2 = district_to_fips['DISTRICT'] != 'not'
         district_to_fips = district_to_fips[cond1 & cond2]
         district_to_fips['DISTRICT'] = district_to_fips['DISTRICT'].apply(lambda x: int(x))
+        district_to_fips = district_to_fips[['STATE', 'STATEFP']]
+        district_to_fips = district_to_fips.drop_duplicates()
         self.district_to_fips = district_to_fips
-
-    def clean_name_to_district(self):
-        name_to_district = self.name_to_district
-        name_to_district['first_name'] = \
-            name_to_district['Representative'].apply(lambda x: x.split(',')[0])
-        name_to_district['last_name'] = \
-            name_to_district['Representative'].apply(lambda x: x.split(',')[1].split(' ')[1])
-        name_to_district['first_name'] = \
-            name_to_district['first_name'].apply(lambda x: x.replace(' ', ''))
-        name_to_district['last_name'] = \
-            name_to_district['last_name'].apply(lambda x: x.replace(' ', ''))
-        name_to_district['District'] = \
-            name_to_district['District'].apply(lambda x: re.findall('Comm|Delegate|Large|[0-9]+',x)[0])
-        name_to_district = \
-            name_to_district[name_to_district['District'] != 'Delegate']
-        name_to_district = name_to_district[['first_name', 'last_name',
-                                             'State', 'District']]
-        name_to_district['State'] = \
-            name_to_district['State'].apply(lambda x: states[x])
-        # for c in ['first_name', 'last_name']:
-        #     name_to_district[c] = name_to_district[c].apply(lambda x: x.decode('unicode-escape'))
-        #     name_to_district[c] = name_to_district[c].apply(lambda x: x.encode('ascii','ignore'))
-        self.name_to_district = name_to_district
 
     def clean_all_rep_info(self):
         all_rep_info = self.all_rep_info
@@ -118,28 +84,42 @@ class Congress(object):
         all_rep_info['DISTRICT'] = all_rep_info['DISTRICT'].apply(lambda x: int(x))
         self.all_rep_info = all_rep_info
 
+    def clean_dbf(self):
+        dbf = self.dbf
+        dbf['CD114FP'] = dbf['CD114FP'].apply(lambda x: int(x) if x != 'ZZ' else x)
+        dbf['STATEFP'] = dbf['STATEFP'].apply(lambda x: int(x))
+        dbf['DISTRICT'] = \
+            dbf['NAMELSAD'].apply(lambda x: re.findall('not|Large|[0-9]+', x)[0])
+        self.dbf = dbf
+
+    def clean all_fips(self):
+        all_fips = self.all_fips
+        
+
     def mergers(self):
         self.merged = self.all_rep_info.merge(self.district_to_fips)
+        #self.merged = self.dbf.merge(self.merged)
 
     def describe(self):
-        print 'legislators'
-        print self.legislators.head()
-        print 'name_to_district'
-        print self.name_to_district.head()
         print 'district_to_fips'
         print self.district_to_fips.head()
         print 'dbf'
         print self.dbf.head()
         print 'all_rep_info'
         print self.all_rep_info.head()
+        print 'merged'
+        print self.merged.head()
+        print self.merged.shape
+        print 'all_fips'
+        print self.all_fips.head()
 
 if __name__ == '__main__':
     c = Congress()
     c.load()
-    c.clean_legislators()
-    c.clean_name_to_district()
     c.clean_district_to_fips()
     c.clean_all_rep_info()
+    c.clean_dbf()
+    c.mergers()
 
 
 
