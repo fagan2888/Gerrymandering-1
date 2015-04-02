@@ -135,15 +135,25 @@ class Congress(object):
         print self.merged.shape
 
     def metrics(self):
+        '''
+        INPUT: None.
+        OUTPUT: None.
+
+        This creates metrics for compactness of all the shapes in the data
+        frame.
+        '''
         Polsby_Popper = []
         Schwartzberg = []
         Convex_Hull = []
         Reock = []
         for s in self.sf.iterShapes():
             poly = Polygon(s.points)
-            Polsby_Popper.append(poly.area * 4 * math.pi / (poly.length ** 2))
-            Schwartzberg.append(poly.length / (2 * (math.pi * poly.area) ** .5 ))
-            Convex_Hull.append(poly.area / poly.convex_hull.area)
+            Polsby_Popper\
+                .append(poly.area * 4 * math.pi / (poly.length ** 2))
+            Schwartzberg\
+                .append(poly.length / (2 * (math.pi * poly.area) ** .5))
+            Convex_Hull\
+                .append(poly.area / poly.convex_hull.area)
             bbox = poly.bounds
             radius = max(abs(bbox[0]-bbox[2]), abs(bbox[1]-bbox[3]))/2
             Reock.append(math.pi * (radius ** 2) / poly.area)
