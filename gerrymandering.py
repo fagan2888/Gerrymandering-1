@@ -88,6 +88,16 @@ class Congress(object):
             all_rep_info['stdis'].apply(lambda x: x[0:2])
         all_rep_info['DISTRICT'] = \
             all_rep_info['stdis'].apply(lambda x: x[2:5])
+        all_rep_info = all_rep_info[~pd.isnull(all_rep_info['first_name'])]
+        all_rep_info['first_name'] = \
+            all_rep_info['first_name']\
+            .apply(lambda x: x.encode('ascii', 'ignore'))
+        all_rep_info['last_name'] = \
+            all_rep_info['last_name']\
+            .apply(lambda x: x.encode('ascii', 'ignore'))
+        all_rep_info['party'] = \
+            all_rep_info['party']\
+            .apply(lambda x: x.encode('ascii', 'ignore'))
         all_rep_info = all_rep_info.drop('stdis', axis=1)
         self.all_rep_info = all_rep_info
 
