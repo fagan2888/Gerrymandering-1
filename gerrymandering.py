@@ -3,6 +3,10 @@ import pandas as pd
 import numpy as np
 import re
 import unicodedata
+import shapefile
+from shapely.geometry import Polygon
+import math
+import pdb
 '''
 README:
 The Congress object reads in the dbf file from the 114 congressional district
@@ -19,6 +23,7 @@ class Congress(object):
         self.district_to_fips = None
         self.all_rep_info = None
         self.merged = None
+        self.sf = None
 
     def load(self, path=None):
         '''
@@ -42,6 +47,7 @@ class Congress(object):
                                             sep=r"\s\s+")
         self.all_rep_info = pd.read_excel(path + 'excel-labels-114.xls',
                                           page=0)
+        self.sf = shapefile.Reader(path + "tl_2014_us_cd114/tl_2014_us_cd114")
 
     def clean_district_to_fips(self):
         '''
@@ -107,11 +113,11 @@ class Congress(object):
         This merges all the data.
         '''
         merged = self.dbf.merge(self.district_to_fips)
-        merged = pd.merge(merged, self.all_rep_info, how='inner',
+        merged = pd.merge(merged, self.all_rep_info, how='left',
                           on=['DISTRICT', 'STATE'])
         self.merged = merged
 
-    def _describe(self):
+    def describe(self):
         '''
         INPUT: None.
         OUTPUT: None.
@@ -127,6 +133,24 @@ class Congress(object):
         print 'merged'
         print self.merged.head()
         print self.merged.shape
+
+    def metrics(self):
+        Polsby_Popper = []
+        Schwartzberg = []
+        Convex_Hull = []
+        Reock = []
+        for s in self.sf.iterShapes():
+            poly = Polygon(s.points)
+            Polsby_Popper.append(poly.area * 4 * math.pi / (poly.length ** 2))
+            Schwartzberg.append(poly.length / (2 * (math.pi * poly.area) ** .5 ))
+            Convex_Hull.append(poly.area / poly.convex_hull.area)
+            bbox = poly.bounds
+            radius = max(abs(bbox[0]-bbox[2]), abs(bbox[1]-bbox[3]))/2
+            Reock.append(math.pi * (radius ** 2) / poly.area)
+        self.merged['Polsby_Popper'] = Polsby_Popper
+        self.merged['Schwartzberg'] = Schwartzberg
+        self.merged['Convex_Hull'] = Convex_Hull
+        self.merged['Reock'] = Reock
 
     def write(self):
         '''
@@ -145,4 +169,6 @@ if __name__ == '__main__':
     c.clean_all_rep_info()
     c.clean_dbf()
     c.mergers()
-    #c.write()
+    c.metrics()
+    c.describe()
+    c.write()
