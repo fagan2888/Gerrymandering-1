@@ -177,8 +177,10 @@ class Congress(object):
         INPUT: None.
         OUTPUT: None.
 
-        This writes the merged dataframe to the previous dbf.
+        This writes the merged dataframe to the previous dbf and creates an
+        ID column. 
         '''
+        self.merged['ID'] = self.merged['STATE'] + self.merged['CD114FP']
         dataIO.df2dbf(self.merged,
                       self.path + "tl_2014_us_cd114/tl_2014_us_cd114.dbf")
 
