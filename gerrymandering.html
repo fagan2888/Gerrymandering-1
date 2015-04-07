@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  background: #565656;
+}
+
+.boundary {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 0px;
+}
+
+.mesh {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+</style>
+<body>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<div id="option">
+<input name="updateButton"
+           type="button"
+           value="Polsby Popper"
+           onclick="ppCols()"
+/> </div>
+<div id="option">
+<input name="updateButton"
+           type="button"
+           value="Convex Hull"
+           onclick="chCols()"
+/> </div>
+<div id="option">
+<input name="updateButton"
+           type="button"
+           value="Reock"
+           onclick="reCols()"
+/> </div>
+<div id="option">
+<input name="updateButton"
+           type="button"
+           value="Schwartzberg"
+           onclick="shCols()"
+/> </div>
+<script>
+
+var width = 1400,
+    height = 600;
+
+var Rcolor = d3.scale.linear()
+		  .domain([0,100])
+		  .range(["#fff","#990012"]);
+
+var Dcolor = d3.scale.linear()
+      .domain([0,100])
+      .range(["#fff","#000073"]);
+
+var projection = d3.geo.albersUsa()
+    .scale(1200)
+    .translate([width / 2, height / 2]);
+
+var zoom = d3.behavior.zoom()
+    .translate([0, 0])
+    .scale(1)
+    .scaleExtent([1, 8])
+    .on("zoom", zoomed);
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var graticule = d3.geo.graticule();
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var g = svg.append("g");
+
+svg
+    .call(zoom)
+    .call(zoom.event);
+
+d3.json("topo_uscd.json", function(error, us) {
+  g.selectAll("path")
+      .data(topojson.feature(us, us.objects.uscd).features)
+      .enter().append("path")
+      .attr("class", "district")
+      .attr("d", path)
+      .attr("fill", "#adadad")
+
+  g.append("path")
+      .datum(topojson.mesh(us, us.objects.uscd, function(a, b) { return a !== b; }))
+      .attr("class", "boundary")
+      .attr("d", path);
+});
+
+d3.select(self.frameElement).style("height", height + "px");
+
+function ppCols() {
+    g.selectAll("path")
+        .attr("fill", function(d){
+          if (d.properties.party == "R") {return Rcolor(d.properties.Polsby_Popp)}
+          else if (d.properties.party == "D") {return Dcolor(d.properties.Polsby_Popp)}
+          else {return "#fff"}
+        });
+}
+
+function chCols() {
+  g.selectAll("path")
+      .attr("fill", function(d){
+        if (d.properties.party == "R") {return Rcolor(d.properties.Convex_Hull)}
+        else if (d.properties.party == "D") {return Dcolor(d.properties.Convex_Hull)}
+        else {return "#fff"}
+      });
+}
+
+function reCols() {
+  g.selectAll("path")
+      .attr("fill", function(d){
+        if (d.properties.party == "R") {return Rcolor(d.properties.Reock)}
+        else if (d.properties.party == "D") {return Dcolor(d.properties.Reock)}
+        else {return "#fff"}
+      });
+}
+
+function shCols() {
+  g.selectAll("path")
+      .attr("fill", function(d){
+        if (d.properties.party == "R") {return Rcolor(d.properties.Schwartzber)}
+        else if (d.properties.party == "D") {return Dcolor(d.properties.Schwartzber)}
+        else {return "#fff"}
+      });
+}
+
+function zoomed() {
+  g.style("stroke-width", 1.5 / d3.event.scale + "px");
+  g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+
+</script>
+
+
+<!--
+ogr2ogr -f GeoJSON /Users/LaughingMan/Desktop/projects/gerrymandering/uscd.json /Users/LaughingMan/Desktop/projects/gerrymandering/cb_2013_us_cd113_20m/cb_2013_us_cd113_20m.shp
+
+topojson -o topo_uscd.json --id-property ID -q 1e5 -p party,STATE,Polsby_Popp,Schwartzber,Convex_Hull,Reock,first_name,last_name uscd.json
+
+Thanks to Mike Bostock for being a living legend!
+Also credit to Scott Murray and his excellent D3 book.
+-->

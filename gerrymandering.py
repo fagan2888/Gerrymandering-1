@@ -6,7 +6,7 @@ import unicodedata
 import shapefile
 from shapely.geometry import Polygon
 import math
-import pdb
+from scipy import stats
 '''
 README:
 The Congress object reads in the dbf file from the 114 congressional district
@@ -41,13 +41,15 @@ class Congress(object):
         else:
             path = self.path
         self.dbf = dataIO.dbf2df(path +
-                                 "tl_2014_us_cd114/tl_2014_us_cd114.dbf")
+                                 "cb_2013_us_cd113_20m/" +
+                                 "cb_2013_us_cd113_20m.dbf")
         self.district_to_fips = pd.read_csv(path +
                                             "national_cd113.txt",
                                             sep=r"\s\s+")
         self.all_rep_info = pd.read_excel(path + 'excel-labels-114.xls',
                                           page=0)
-        self.sf = shapefile.Reader(path + "tl_2014_us_cd114/tl_2014_us_cd114")
+        self.sf = shapefile.Reader(path + "cb_2013_us_cd113_20m/" +
+                                   "cb_2013_us_cd113_20m")
 
     def clean_district_to_fips(self):
         '''
@@ -71,6 +73,8 @@ class Congress(object):
         district_to_fips['CD114FP'] = \
             district_to_fips['CD114FP']\
             .apply(lambda x: '00' if x == 'ZZ' else x)
+        cnames = ['STATE', 'STATEFP', 'CD113FP', 'NAMELSAD', 'DISTRICT']
+        district_to_fips.columns = cnames
         self.district_to_fips = district_to_fips
 
     def clean_all_rep_info(self):
@@ -109,8 +113,8 @@ class Congress(object):
         This prepares the dbf file for merging.
         '''
         dbf = self.dbf
-        dbf['CD114FP'] = \
-            dbf['CD114FP'].apply(lambda x: '00' if x == 'ZZ' else x)
+        dbf['CD113FP'] = \
+            dbf['CD113FP'].apply(lambda x: '00' if x == 'ZZ' else x)
         dbf['STATEFP'] = \
             dbf['STATEFP'].apply(lambda x: int(x))
         self.dbf = dbf
@@ -134,15 +138,14 @@ class Congress(object):
 
         This prints the head of each of the data frames in the object.
         '''
-        print 'district_to_fips'
+        print 'district_to_fips', self.district_to_fips.shape
         print self.district_to_fips.head()
-        print 'dbf'
+        print 'dbf', self.dbf.shape
         print self.dbf.head()
-        print 'all_rep_info'
+        print 'all_rep_info', self.all_rep_info.shape
         print self.all_rep_info.head()
-        print 'merged'
+        print 'merged', self.merged.shape
         print self.merged.head()
-        print self.merged.shape
 
     def metrics(self):
         '''
@@ -159,14 +162,31 @@ class Congress(object):
         for s in self.sf.iterShapes():
             poly = Polygon(s.points)
             Polsby_Popper\
-                .append(poly.area * 4 * math.pi / (poly.length ** 2))
+                .append((poly.length ** 2) / (poly.area * 4 * math.pi))
             Schwartzberg\
                 .append(poly.length / (2 * (math.pi * poly.area) ** .5))
             Convex_Hull\
-                .append(poly.area / poly.convex_hull.area)
+                .append(poly.convex_hull.area / poly.area)
             bbox = poly.bounds
             radius = max(abs(bbox[0]-bbox[2]), abs(bbox[1]-bbox[3]))/2
             Reock.append(math.pi * (radius ** 2) / poly.area)
+
+        Polsby_Popper = [x / max(Polsby_Popper) for x in Polsby_Popper]
+        Schwartzberg = [x / max(Schwartzberg) for x in Schwartzberg]
+        Convex_Hull = [x / max(Convex_Hull) for x in Convex_Hull]
+        Reock = [x / max(Reock) for x in Reock]
+        Polsby_Popper = \
+            [stats.percentileofscore(Polsby_Popper, a, 'weak') \
+                for a in Polsby_Popper]
+        Schwartzberg = \
+            [stats.percentileofscore(Schwartzberg, a, 'weak') \
+                for a in Schwartzberg]
+        Convex_Hull = \
+            [stats.percentileofscore(Convex_Hull, a, 'weak') \
+                for a in Convex_Hull]
+        Reock = \
+            [stats.percentileofscore(Reock, a, 'weak') for a in Reock]
+
         self.merged['Polsby_Popper'] = Polsby_Popper
         self.merged['Schwartzberg'] = Schwartzberg
         self.merged['Convex_Hull'] = Convex_Hull
@@ -178,11 +198,12 @@ class Congress(object):
         OUTPUT: None.
 
         This writes the merged dataframe to the previous dbf and creates an
-        ID column. 
+        ID column.
         '''
-        self.merged['ID'] = self.merged['STATE'] + self.merged['CD114FP']
+        self.merged['ID'] = self.merged['STATE'] + self.merged['CD113FP']
         dataIO.df2dbf(self.merged,
-                      self.path + "tl_2014_us_cd114/tl_2014_us_cd114.dbf")
+                      self.path + "cb_2013_us_cd113_20m/" +
+                      "cb_2013_us_cd113_20m.dbf")
 
 if __name__ == '__main__':
     c = Congress()
