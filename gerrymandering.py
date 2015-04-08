@@ -9,10 +9,11 @@ import math
 from scipy import stats
 '''
 README:
-The Congress object reads in the dbf file from the 114 congressional district
-tigerline shapefile and merges in data about each representative. Note that
+The Congress object reads in the dbf file from the 113 congressional district
+shapefile and merges in data about each representative. Note that
 states that are majoritarian or otherwise do not allocate representatives by
-districting recieve NaNs for their representative data.
+districting recieve NaNs for their representative data. Representative data
+is current (Apr 2015). 
 '''
 
 
