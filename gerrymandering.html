@@ -6,6 +6,12 @@ body {
   background: #565656;
 }
 
+svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
 .boundary {
   fill: none;
   stroke: #fff;
@@ -19,39 +25,28 @@ body {
   stroke-linejoin: round;
 }
 
+#option {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 2;
+}
+
 </style>
 <body>
 <script src="http://d3js.org/d3.v3.min.js"></script>
 <script src="http://d3js.org/d3.geo.projection.v0.min.js"></script>
 <script src="http://d3js.org/topojson.v1.min.js"></script>
 <div id="option">
-<input name="updateButton"
-           type="button"
-           value="Polsby Popper"
-           onclick="ppCols()"
-/> </div>
-<div id="option">
-<input name="updateButton"
-           type="button"
-           value="Convex Hull"
-           onclick="chCols()"
-/> </div>
-<div id="option">
-<input name="updateButton"
-           type="button"
-           value="Reock"
-           onclick="reCols()"
-/> </div>
-<div id="option">
-<input name="updateButton"
-           type="button"
-           value="Schwartzberg"
-           onclick="shCols()"
-/> </div>
+  <button onclick="ppCols()"/>Polsby Popper</button>
+  <button onclick="chCols()"/>Convex Hull</button>
+  <button onclick="reCols()"/>Reock</button>
+  <button onclick="shCols()"/>Schwartzberg</button>
+</div>
 <script>
 
 var width = 1400,
-    height = 600;
+    height = 800;
 
 var Rcolor = d3.scale.linear()
 		  .domain([0,100])
@@ -142,6 +137,7 @@ function zoomed() {
   g.style("stroke-width", 1.5 / d3.event.scale + "px");
   g.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 }
+
 
 
 </script>
